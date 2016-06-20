@@ -41,6 +41,7 @@ class DataSet(object):
         self.nimgs = sum(self.counts.values())
 
     def split_train_validate_test(self, random_state=RANDOM_STATE):
+        """Create a train, validate, test split"""
         # split off the training set
         X_train, X_vt, y_train, y_vt = train_test_split(
             self.Xs, self.y, test_size=0.2, random_state=random_state)
@@ -63,15 +64,18 @@ class DataSet(object):
             y.append(y_1)
         y = np.concatenate(y)
         imgs = np.concatenate(imgs)
+        print('shape(imgs): {}'.format(imgs.shape))
+
         X = imgs.reshape(imgs.shape[0], NPIX*NPIX)
         if shuffle:
             X, y = sklearn.utils.shuffle(X, y, random_state=random_state)
+
+        self.Ximgs = X.reshape(X.shape[0], NPIX, NPIX)
+        self.scaler = StandardScaler()
+        self.Xs = self.scaler.fit_transform(X)
         self.X = X
         self.y = y
 
-    def standardize_X(self):
-        scaler = StandardScaler()
-        self.Xs = scaler.fit_transform(self.X)
 
     def get_image_counts(self):
         """count the number of image files in each label directory"""
@@ -103,26 +107,27 @@ class DataSet(object):
         print('skipped {} of {}'.format(nfiles-igood, nfiles))
         return imgs
 
-    def plot_random_selection(self, imgs, nrows=5, ncols=5):
+    def plot_random_selection(self, nrows=5, ncols=5):
         """plot a random selection of images in the `imgs` array"""
-        nimgs = imgs.shape[0]
+        nimgs = ds.Ximgs.shape[0]
         fig, axs = plt.subplots(
             nrows, ncols, sharex=True, sharey=True, figsize=(7,7))
         for ir in range(nrows):
             for ic in range(ncols):
                 iplt = np.random.randint(low=0, high=nimgs)
-                axs[ir,ic].imshow(imgs[iplt,:,:], cmap=cm.gray)
+                axs[ir,ic].imshow(ds.Ximgs[iplt,:,:], cmap=cm.gray)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
 
 
 
 
-#data_dir = 'notMNIST_small'
-data_dir = 'notMNIST_large'
+data_dir = '../data/notMNIST_small'
+#data_dir = '../data/notMNIST_large'
 ds = DataSet(data_dir)
 ds.attach_X_y()
-ds.standardize_X()
+
+
 X, y = ds.split_train_validate_test()
 model = LogisticRegression(random_state=RANDOM_STATE, verbose=0)
 for n_samples in [50, 100, 1000, 5000, None]:
